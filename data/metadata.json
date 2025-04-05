@@ -1,0 +1,16 @@
+{
+  "last_updated": "2025-04-04T22:27:06.475129",
+  "tracked_conferences": [
+    "mock_conf_machine learning for healthcare_1",
+    "mock_conf_machine learning for healthcare_2",
+    "mock_conf_machine learning_1",
+    "mock_conf_machine learning_2",
+    "mock_conf_general_1",
+    "mock_conf_general_2"
+  ],
+  "tracked_research_areas": [
+    "Machine Learning for Healthcare",
+    "Machine Learning"
+  ],
+  "version": "1.0.0"
+}

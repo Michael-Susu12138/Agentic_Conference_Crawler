@@ -1,0 +1,13 @@
+{
+  "id": "mock_conf_general_1",
+  "title": "World AI and Machine Learning Conference",
+  "dates": "November 10-12, 2025",
+  "location": "Berlin, Germany",
+  "description": "Global conference covering AI, Machine Learning, and Data Science topics.",
+  "deadlines": [
+    "Paper submission: July 15, 2025",
+    "Registration: October 1, 2025"
+  ],
+  "url": "https://example.com/world-ai",
+  "_last_updated": "2025-04-04T22:29:38.288751"
+}

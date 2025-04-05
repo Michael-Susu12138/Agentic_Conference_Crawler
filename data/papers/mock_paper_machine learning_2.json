@@ -1,0 +1,14 @@
+{
+  "id": "mock_paper_machine learning_2",
+  "title": "Machine Learning for Real-World Applications",
+  "authors": [
+    "Bob Williams",
+    "Sarah Miller"
+  ],
+  "year": 2025,
+  "citations": 28,
+  "abstract": "We explore practical applications of Machine Learning in industry settings. Our findings show promising results for deployment in production environments.",
+  "url": "https://example.com/paper2",
+  "research_area": "Machine Learning",
+  "_last_updated": "2025-04-04T22:29:38.289748"
+}

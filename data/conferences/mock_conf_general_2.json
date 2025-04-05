@@ -1,0 +1,13 @@
+{
+  "id": "mock_conf_general_2",
+  "title": "Annual Computer Science Symposium",
+  "dates": "September 22-24, 2025",
+  "location": "Tokyo, Japan",
+  "description": "Broad computer science conference covering AI, algorithms, and computing systems.",
+  "deadlines": [
+    "Paper submission: May 30, 2025",
+    "Registration: August 15, 2025"
+  ],
+  "url": "https://example.com/cs-symposium",
+  "_last_updated": "2025-04-04T22:29:38.288751"
+}
