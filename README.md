@@ -1,117 +1,223 @@
-# Conference Monitor Agent
+# 🎓 Agentic Conference Crawler
 
-An AI-powered agent for tracking academic conferences, papers, and research trends in your field of interest.
+<div align="center">
+  <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python 3.9+">
+  <img src="https://img.shields.io/badge/react-18.2-61DAFB.svg" alt="React 18.2">
+  <img src="https://img.shields.io/badge/flask-2.0-black.svg" alt="Flask 2.0">
+  <img src="https://img.shields.io/badge/material--ui-5.15-0081CB.svg" alt="Material UI 5.15">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License MIT">
+</div>
 
-## Features
+<p align="center">
+  <img src="./assets/conference-crawler-icon.svg" alt="Conference Crawler Icon" width="180">
+</p>
 
-- **Track Conferences**: Monitor upcoming academic conferences in various research areas
-- **Conference Deadlines**: Keep track of call for papers and submission deadlines
-- **Paper Monitoring**: Find and summarize recently published papers in specific research areas
-- **Trend Analysis**: Identify trending topics and emerging research directions
-- **Report Generation**: Generate comprehensive reports on conferences, papers, and trends
-- **REST API**: Access all functionality through a clean HTTP API interface
+An intelligent, agentic system for monitoring academic conferences across various research areas. The system automatically collects, validates, and presents conference data, including deadlines, locations, and rankings, while eliminating duplicates and outdated entries.
 
-## Installation
+## ✨ Features
 
-1. Clone this repository
-2. Install the required dependencies:
+- 🔍 **Intelligent Conference Discovery**: Automatically finds and tracks academic conferences across multiple research areas
+- 🗂 **Tiered Conference Ranking**: Classifies conferences by quality (A\*, A, B, C tiers)
+- 📅 **Smart Deadline Tracking**: Monitors submission deadlines and important dates
+- 🧠 **Research Area Categorization**: Organizes conferences by research domains
+- 🔄 **Deduplication**: Ensures each conference appears only once, even if found from multiple sources
+- 📱 **Modern UI**: Clean, responsive interface built with React and Material UI
+- 💾 **Database Integration**: SQLite storage for better performance and reliability
+- 🤖 **AI-Powered Queries**: Natural language interface for advanced searches
 
-```bash
-pip install -r requirements.txt
-```
+## 🏗 System Architecture
 
-3. Set up your API keys in the `.env` file:
+The Agentic Conference Crawler consists of two main components:
 
-```
-# Google API Key (for Gemini)
-GOOGLE_API_KEY=your_google_api_key_here
+1. **Backend**: A Python Flask application that handles:
 
-# OpenAI API Key (alternative)
-OPENAI_API_KEY=your_openai_api_key_here
-```
+   - Conference data collection and processing
+   - Database management
+   - API endpoints
+   - Natural language processing
 
-## Usage
+2. **Frontend**: A React application that provides:
+   - User interface for viewing and filtering conferences
+   - Data visualization
+   - Search capabilities
+   - Research area management
 
-### Command Line Interface
+## 🚀 Getting Started
 
-The agent can be used through a command-line interface:
+### Prerequisites
 
-```bash
-# Run the API server
-python -m conference_monitor.main api
+- Python 3.9+
+- Node.js 16+
+- npm 8+
 
-# Monitor conferences and papers
-python -m conference_monitor.main monitor --areas "artificial intelligence" "machine learning"
+### Backend Installation
 
-# Run a one-time refresh of data
-python -m conference_monitor.main monitor --once
+1. Clone the repository:
 
-# Generate reports
-python -m conference_monitor.main report conferences
-python -m conference_monitor.main report papers --area "machine learning"
-python -m conference_monitor.main report trends
-```
+   ```bash
+   git clone https://github.com/yourusername/Agentic_Conference_Crawler.git
+   cd Agentic_Conference_Crawler
+   ```
 
-### REST API
+2. Create and activate a virtual environment:
 
-The agent provides a RESTful API that can be accessed at `http://localhost:5000`:
+   ```bash
+   python -m venv venv
 
-```bash
-# Start the API server
-python -m conference_monitor.main api
-```
+   # On Windows
+   venv\Scripts\activate
 
-#### API Endpoints
+   # On macOS/Linux
+   source venv/bin/activate
+   ```
 
-- `GET /api/status` - Get API server status
-- `GET /api/conferences` - List all tracked conferences
-- `POST /api/conferences/refresh` - Refresh conference data
-- `GET /api/papers` - List all tracked papers
-- `POST /api/papers/refresh` - Refresh paper data
-- `GET /api/trends` - Get trending topics in research areas
-- `POST /api/query` - Run direct queries against the AI model
-- `GET /api/research-areas` - List tracked research areas
-- `POST /api/research-areas` - Update tracked research areas
+3. Install Python dependencies:
 
-For full API documentation, see `conference_monitor/api/swagger.yaml`.
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Testing the API
+4. Create a `.env` file in the project root with the following content:
+   ```
+   FLASK_APP=conference_monitor.api.app
+   FLASK_ENV=development
+   API_KEY=your_api_key_here
+   ```
 
-Run the included test script to verify the API is working correctly:
+### Frontend Installation
 
-```bash
-python -m conference_monitor.api.test_api
-```
+1. Navigate to the frontend directory:
 
-## Architecture
+   ```bash
+   cd frontend
+   ```
 
-The system is structured as follows:
+2. Install Node.js dependencies:
+   ```bash
+   npm install
+   ```
 
-- **Core**: Base agent functionality, browser interface, and memory management
-- **Tools**: Specialized tools for searching conferences, papers, and analyzing trends
-- **Models**: Data models for conferences, papers, and trends
-- **Services**: Higher-level services for monitoring and report generation
-- **API**: Flask-based REST API for accessing functionality
+## 🏃‍♂️ Running the Application
 
-## Extending
+### Backend Server
 
-To add support for new sources or features:
+1. From the project root directory with the virtual environment activated:
+   ```bash
+   flask run
+   ```
+   The backend server will start on http://localhost:5000
 
-1. Add new tools in the `tools` directory
-2. Update the relevant services in the `services` directory
-3. Add new API endpoints to the Flask app if needed
+### Frontend Development Server
 
-## License
+1. In a separate terminal, navigate to the frontend directory:
 
-MIT
+   ```bash
+   cd frontend
+   ```
 
-## Contributing
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+   The frontend will be available at http://localhost:5173
+
+## 📖 Using the Application
+
+### Homepage
+
+The homepage provides an overview of the system's features and quick access to all functionality.
+
+### Conferences Page
+
+The Conferences page displays upcoming academic conferences with the following features:
+
+1. **Filtering**:
+
+   - By Research Area: Select a specific research domain
+   - By Tier: Filter conferences by quality ranking (A\*, A, B, C)
+
+2. **Conference Cards**:
+
+   - **Title**: Name of the conference
+   - **Tier Badge**: Color-coded quality ranking
+   - **Dates**: When the conference will take place
+   - **Research Areas**: Related domains (clickable)
+   - **Location**: Where the conference will be held
+   - **Deadlines**: Important submission dates
+   - **Website Link**: Direct access to the conference site
+
+3. **Refreshing Data**:
+   - Click "Refresh Conferences" to fetch the latest conference information
+   - The system will automatically deduplicate entries and filter out past conferences
+
+### Interpreting Conference Tiers
+
+Conferences are ranked according to their quality and prestige:
+
+- **A\* (Red)**: Top-tier, flagship conferences in the field
+- **A (Orange)**: Excellent conferences with high impact
+- **B (Green)**: Good quality conferences
+- **C (Blue)**: Regular conferences and workshops
+
+### Managing Research Areas
+
+The system tracks conferences in multiple research domains. You can:
+
+1. View all currently tracked research areas
+2. Add new research areas to monitor
+3. Remove research areas no longer of interest
+
+## 🔌 API Documentation
+
+The system provides a RESTful API for programmatic access:
+
+| Endpoint                   | Method | Description                                        |
+| -------------------------- | ------ | -------------------------------------------------- |
+| `/api/status`              | GET    | Check API status                                   |
+| `/api/conferences`         | GET    | Get all conferences (optional filters: area, tier) |
+| `/api/conferences/refresh` | POST   | Refresh conference data                            |
+| `/api/papers`              | GET    | Get all tracked papers                             |
+| `/api/papers/refresh`      | POST   | Refresh paper data                                 |
+| `/api/trends`              | GET    | Get trending topics                                |
+| `/api/query`               | POST   | Run a direct query                                 |
+| `/api/research-areas`      | GET    | Get tracked research areas                         |
+| `/api/research-areas`      | POST   | Update tracked research areas                      |
+
+## 🗄 Data Storage
+
+The system uses two storage mechanisms:
+
+1. **SQLite Database**:
+
+   - Primary storage for conferences and papers
+   - Located at `data/conference_monitor.db`
+   - Provides efficient querying and filtering
+
+2. **JSON Files** (for backward compatibility):
+   - Conference data: `data/conferences/`
+   - Paper data: `data/papers/`
+   - Metadata: `data/metadata.json`
+
+## 🛠 Customization
+
+### Adding New Conference Sources
+
+The system can be extended to support additional conference sources by:
+
+1. Adding new URLs to the `default_sources` list in `ConferenceSearchTool`
+2. Implementing source-specific parsing in the `_build_search_url` method
+
+### Customizing Conference Tiers
+
+The tiering system can be adjusted in `_generate_sample_conferences` within the `MonitorService` class.
+
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Frontend
 
-The project now includes a React frontend that provides a user-friendly interface for interacting with the Conference Monitor API.
+The project includes a React frontend that provides a user-friendly interface for interacting with the Conference Monitor API.
 
 ### Frontend Features:
 
@@ -151,3 +257,7 @@ The project now includes a React frontend that provides a user-friendly interfac
 - Material UI - Component library
 - React Router - Navigation
 - Axios - API communication
+
+## 📄 License
+
+This project is licensed under the MIT License.

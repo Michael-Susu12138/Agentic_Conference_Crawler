@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <!-- Background -->
+  <circle cx="200" cy="200" r="190" fill="#f0f4f8" stroke="#2a4365" stroke-width="4"/>
+  
+  <!-- Conference Elements -->
+  <rect x="100" y="130" width="200" height="140" rx="10" ry="10" fill="#4299e1" opacity="0.2"/>
+  <rect x="115" y="145" width="170" height="110" rx="5" ry="5" fill="#2b6cb0" opacity="0.3"/>
+  
+  <!-- Document/Paper icons -->
+  <rect x="130" y="165" width="30" height="40" fill="white" stroke="#2c5282" stroke-width="2"/>
+  <rect x="240" y="165" width="30" height="40" fill="white" stroke="#2c5282" stroke-width="2"/>
+  <rect x="185" y="180" width="30" height="40" fill="white" stroke="#2c5282" stroke-width="2"/>
+  
+  <!-- Text lines on documents -->
+  <line x1="135" y1="175" x2="155" y2="175" stroke="#2c5282" stroke-width="1.5"/>
+  <line x1="135" y1="180" x2="155" y2="180" stroke="#2c5282" stroke-width="1.5"/>
+  <line x1="135" y1="185" x2="155" y2="185" stroke="#2c5282" stroke-width="1.5"/>
+  
+  <line x1="245" y1="175" x2="265" y2="175" stroke="#2c5282" stroke-width="1.5"/>
+  <line x1="245" y1="180" x2="265" y2="180" stroke="#2c5282" stroke-width="1.5"/>
+  <line x1="245" y1="185" x2="265" y2="185" stroke="#2c5282" stroke-width="1.5"/>
+  
+  <line x1="190" y1="190" x2="210" y2="190" stroke="#2c5282" stroke-width="1.5"/>
+  <line x1="190" y1="195" x2="210" y2="195" stroke="#2c5282" stroke-width="1.5"/>
+  <line x1="190" y1="200" x2="210" y2="200" stroke="#2c5282" stroke-width="1.5"/>
+  
+  <!-- Spider/Crawler -->
+  <circle cx="200" cy="120" r="25" fill="#3182ce"/>
+  <circle cx="200" cy="120" r="18" fill="#2b6cb0"/>
+  <circle cx="200" cy="120" r="12" fill="#2c5282"/>
+  
+  <!-- Spider eyes -->
+  <circle cx="195" cy="115" r="3" fill="white"/>
+  <circle cx="205" cy="115" r="3" fill="white"/>
+  
+  <!-- Spider legs -->
+  <path d="M180,105 Q160,80 140,90" fill="none" stroke="#2c5282" stroke-width="3" stroke-linecap="round"/>
+  <path d="M220,105 Q240,80 260,90" fill="none" stroke="#2c5282" stroke-width="3" stroke-linecap="round"/>
+  <path d="M175,120 Q145,120 130,130" fill="none" stroke="#2c5282" stroke-width="3" stroke-linecap="round"/>
+  <path d="M225,120 Q255,120 270,130" fill="none" stroke="#2c5282" stroke-width="3" stroke-linecap="round"/>
+  <path d="M180,135 Q160,160 140,170" fill="none" stroke="#2c5282" stroke-width="3" stroke-linecap="round"/>
+  <path d="M220,135 Q240,160 260,170" fill="none" stroke="#2c5282" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Web connections -->
+  <line x1="200" y1="145" x2="200" y2="165" stroke="#2c5282" stroke-width="2" stroke-dasharray="3,3"/>
+  <line x1="185" y1="135" x2="145" y2="165" stroke="#2c5282" stroke-width="2" stroke-dasharray="3,3"/>
+  <line x1="215" y1="135" x2="255" y2="165" stroke="#2c5282" stroke-width="2" stroke-dasharray="3,3"/>
+  
+  <!-- LLM Agent Brain -->
+  <circle cx="200" cy="70" r="15" fill="none" stroke="#805ad5" stroke-width="3"/>
+  <path d="M190,70 Q200,60 210,70 Q200,80 190,70" fill="none" stroke="#805ad5" stroke-width="2"/>
+  <path d="M190,65 Q200,55 210,65" fill="none" stroke="#805ad5" stroke-width="2"/>
+  <path d="M190,75 Q200,85 210,75" fill="none" stroke="#805ad5" stroke-width="2"/>
+  
+  <!-- Connection between LLM and Crawler -->
+  <path d="M200,85 Q200,95 200,95" fill="none" stroke="#805ad5" stroke-width="2" stroke-dasharray="3,2"/>
+  
+  <!-- Text Banner -->
+  <rect x="100" y="230" width="200" height="30" rx="5" ry="5" fill="#2b6cb0"/>
+  
+  <!-- Text for Banner (Conference Crawler) -->
+  <text x="200" y="250" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white" text-anchor="middle">Conference Crawler</text>
+  
+  <!-- Agent text -->
+  <text x="200" y="280" font-family="Arial, sans-serif" font-size="12" fill="#805ad5" text-anchor="middle">Powered by LLM Agents</text>
+</svg>
