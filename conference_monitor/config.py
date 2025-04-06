@@ -3,9 +3,14 @@ Configuration settings for the Conference Monitor Agent
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # API Keys (load from environment variables for security)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
 SEMANTIC_SCHOLAR_API_KEY = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "")
 
 # File paths
@@ -35,5 +40,6 @@ MAX_PAPERS_PER_QUERY = 50
 MAX_CONFERENCES_TO_TRACK = 20
 
 # LLM Settings
-DEFAULT_LLM_MODEL = "gpt-4" 
+DEFAULT_LLM_MODEL = "gemini-2.0-flash-001"  # Google Gemini model
+DEFAULT_LLM_PROVIDER = "google"  # "google" or "openai"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small" 

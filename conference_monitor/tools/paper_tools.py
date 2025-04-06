@@ -4,13 +4,17 @@ Paper search tools for finding and analyzing academic papers
 from typing import Dict, List, Any, Optional
 import logging
 from datetime import datetime, timedelta
+import os
+import json
+import re
+import uuid
 
 from scholarly import scholarly
 import requests
 
 from conference_monitor.tools.base import BaseTool
 from conference_monitor.core.memory import AgentMemory
-from conference_monitor.config import SEMANTIC_SCHOLAR_API_KEY, MAX_PAPERS_PER_QUERY
+from conference_monitor.config import SEMANTIC_SCHOLAR_API_KEY, MAX_PAPERS_PER_QUERY, DATA_DIR
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -65,7 +69,7 @@ class PaperSearchTool(BaseTool):
     def _execute(self, query: str, author: Optional[str] = None,
                 year_from: Optional[int] = None, year_to: Optional[int] = None,
                 limit: Optional[int] = None) -> Dict[str, Any]:
-        """Execute the paper search
+        """Execute the paper search (required abstract method from BaseTool)
         
         Args:
             query: The search query
@@ -77,73 +81,101 @@ class PaperSearchTool(BaseTool):
         Returns:
             Dictionary with search results
         """
-        limit = min(limit or MAX_PAPERS_PER_QUERY, MAX_PAPERS_PER_QUERY)
+        # Just delegate to the execute method
+        return self.execute(query=query, limit=limit or MAX_PAPERS_PER_QUERY)
+    
+    def execute(self, query: str, limit: int = MAX_PAPERS_PER_QUERY) -> Dict[str, Any]:
+        """Execute the paper search tool
         
+        Args:
+            query: Search query
+            limit: Maximum number of papers to return
+            
+        Returns:
+            Dictionary with search results
+        """
+        self.last_query = query
         logger.info(f"Searching for papers: {query}")
         
-        # Prepare search query with filters
-        search_query = query
-        if author:
-            search_query = f"author:{author} {search_query}"
-        
-        # Default to recent papers if no year range specified
-        if not year_from and not year_to:
-            current_year = datetime.now().year
-            year_from = current_year - 2  # Last 2 years
+        results = {
+            "query": query,
+            "timestamp": datetime.now().isoformat(),
+            "papers": []
+        }
         
         try:
-            # Use Google Scholar API through scholarly
-            search_query = scholarly.search_pubs(search_query)
+            # Use scholarly to search Google Scholar
+            search_query = scholarly.search_pubs(query)
             papers = []
             
+            # Get limited number of results
             for i, result in enumerate(search_query):
                 if i >= limit:
                     break
                 
-                # Filter by year if specified
-                pub_year = result.get('bib', {}).get('pub_year')
-                if pub_year:
-                    try:
-                        pub_year = int(pub_year)
-                        if (year_from and pub_year < year_from) or (year_to and pub_year > year_to):
-                            continue
-                    except (ValueError, TypeError):
-                        # If we can't parse the year, include it anyway
-                        pass
-                
-                # Extract relevant info
-                paper_data = {
-                    "id": result.get('pub_url', '').split('citation_for_view=')[-1] if result.get('pub_url') else f"paper_{i}",
-                    "title": result.get('bib', {}).get('title', 'Untitled'),
-                    "authors": result.get('bib', {}).get('author', []),
-                    "year": pub_year,
-                    "abstract": result.get('bib', {}).get('abstract', ''),
-                    "url": result.get('pub_url', ''),
-                    "citations": result.get('num_citations', 0),
-                    "source": "Google Scholar"
+                # Convert to our paper format
+                paper = {
+                    "id": result.get("pub_url", "") or str(uuid.uuid4()),
+                    "title": result.get("bib", {}).get("title", "Untitled"),
+                    "authors": result.get("bib", {}).get("author", []),
+                    "year": result.get("bib", {}).get("pub_year", ""),
+                    "abstract": result.get("bib", {}).get("abstract", ""),
+                    "venue": result.get("bib", {}).get("venue", ""),
+                    "citations": result.get("num_citations", 0),
+                    "url": result.get("pub_url", ""),
+                    "research_area": query
                 }
                 
-                papers.append(paper_data)
+                # Save paper to disk using our safe method
+                self._save_paper(paper)
                 
-                # Store in memory
-                self.memory.save_paper(paper_data)
+                # Add to memory
+                self.memory.save_paper(paper)
+                
+                # Add to results
+                papers.append(paper)
             
-            return {
-                "papers": papers,
-                "total_count": len(papers),
-                "query": query,
-                "source": "Google Scholar"
-            }
+            results["papers"] = papers
+            results["total"] = len(papers)
             
+            return results
         except Exception as e:
             logger.error(f"Error searching papers: {str(e)}")
-            # Fall back to empty results
             return {
-                "papers": [],
-                "total_count": 0,
                 "query": query,
+                "timestamp": datetime.now().isoformat(),
+                "papers": [],
                 "error": str(e)
             }
+
+    def _save_paper(self, paper: Dict[str, Any]) -> str:
+        """Save paper data to disk
+        
+        Args:
+            paper: Paper data
+            
+        Returns:
+            Path to saved file
+        """
+        try:
+            # Generate a safe filename - replace any URL or special chars
+            paper_id = paper.get("id", str(uuid.uuid4()))
+            # Remove any URL components or invalid filename characters
+            safe_id = re.sub(r'[\\/:*?"<>|]', '_', paper_id)
+            
+            # Ensure directory exists
+            os.makedirs(os.path.join(DATA_DIR, "papers"), exist_ok=True)
+            
+            # Save to file
+            filename = os.path.join(DATA_DIR, "papers", f"{safe_id}.json")
+            
+            with open(filename, "w", encoding="utf-8") as f:
+                json.dump(paper, f, indent=2)
+            
+            return filename
+        except Exception as e:
+            logger.error(f"Error saving paper: {str(e)}")
+            return ""
 
 
 class PaperSummaryTool(BaseTool):
@@ -179,6 +211,19 @@ class PaperSummaryTool(BaseTool):
             },
             "required": ["paper_id"]
         }
+    
+    def execute(self, paper_id: str, paper_url: Optional[str] = None) -> Dict[str, Any]:
+        """Execute the paper summary
+        
+        Args:
+            paper_id: ID of the paper to summarize
+            paper_url: URL of the paper to summarize (alternative to paper_id)
+            
+        Returns:
+            Dictionary with paper summary
+        """
+        # Delegate to the _execute method for consistency with abstract class
+        return self._execute(paper_id=paper_id, paper_url=paper_url)
     
     def _execute(self, paper_id: str, paper_url: Optional[str] = None) -> Dict[str, Any]:
         """Execute the paper summary
@@ -275,6 +320,20 @@ class RecentPapersMonitorTool(BaseTool):
     
     def _execute(self, research_area: str, days_back: Optional[int] = 30,
                 limit: Optional[int] = None) -> Dict[str, Any]:
+        """Execute the recent papers monitor (required abstract method from BaseTool)
+        
+        Args:
+            research_area: The research area to monitor
+            days_back: Number of days to look back
+            limit: Maximum number of papers to return
+            
+        Returns:
+            Dictionary with recent papers
+        """
+        # Delegate to the execute method
+        return self.execute(research_area=research_area, days_back=days_back, limit=limit)
+    
+    def execute(self, research_area: str, days_back: int = 30, limit: int = None) -> Dict[str, Any]:
         """Execute the recent papers monitor
         
         Args:
@@ -301,7 +360,6 @@ class RecentPapersMonitorTool(BaseTool):
         
         search_results = search_tool.execute(
             query=research_area,
-            year_from=current_year - 1,  # Include papers from last year
             limit=limit
         )
         

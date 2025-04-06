@@ -1,9 +1,14 @@
 streamlit==1.31.0
 requests==2.31.0
 beautifulsoup4==4.12.2
-langchain==0.1.4
-langchain-openai==0.0.5
 pydantic==2.4.2
 python-dateutil==2.8.2
 scholarly==1.7.11
+python-dotenv==1.0.0
+
+# LangChain packages - fixed compatible versions
+langchain==0.1.4
+langchain_core==0.1.23
+langchain-openai==0.0.5
+langchain-google-genai==0.0.7
 openai>=1.10.0,<2.0.0 

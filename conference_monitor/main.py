@@ -33,8 +33,8 @@ def setup_services():
     Returns:
         Tuple of (agent, memory, browser, monitor_service, report_service)
     """
-    # Create agent
-    agent = ConferenceAgent()
+    # Create agent with mock_mode=False to use the real API
+    agent = ConferenceAgent(mock_mode=False)
     
     # Create memory
     memory = AgentMemory()
@@ -42,8 +42,8 @@ def setup_services():
     # Create browser
     browser = BrowserManager()
     
-    # Create services
-    monitor_service = MonitorService(agent=agent, memory=memory, browser=browser)
+    # Create services with mock_mode=False
+    monitor_service = MonitorService(agent=agent, memory=memory, browser=browser, mock_mode=False)
     report_service = ReportService(agent=agent, memory=memory)
     
     return agent, memory, browser, monitor_service, report_service

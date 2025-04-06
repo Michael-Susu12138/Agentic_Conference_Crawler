@@ -28,8 +28,8 @@ def get_services():
     Returns:
         Dictionary of initialized services
     """
-    # Setup LLM agent
-    agent = ConferenceAgent(verbose=False)
+    # Setup LLM agent with mock_mode=False to use the real API
+    agent = ConferenceAgent(verbose=False, mock_mode=False)
     
     # Setup memory
     memory = AgentMemory()
@@ -37,8 +37,8 @@ def get_services():
     # Setup browser
     browser = BrowserManager()
     
-    # Setup services
-    monitor_service = MonitorService(agent=agent, memory=memory, browser=browser)
+    # Setup services with mock_mode=False
+    monitor_service = MonitorService(agent=agent, memory=memory, browser=browser, mock_mode=False)
     report_service = ReportService(agent=agent, memory=memory)
     
     return {

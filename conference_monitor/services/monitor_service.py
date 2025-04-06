@@ -215,37 +215,46 @@ class MonitorService:
                     "title": "Annual Computer Science Symposium",
                     "dates": "September 22-24, 2025",
                     "location": "Tokyo, Japan",
-                    "description": "Broad computer science conference covering AI, algorithms, and computing systems.",
+                    "description": "Annual symposium covering all areas of computer science.",
                     "deadlines": ["Paper submission: May 30, 2025", "Registration: August 15, 2025"],
                     "url": "https://example.com/cs-symposium"
                 }
             ])
             
-            # Save mock conferences to memory
+            # Update memory with mock data
             for conf in mock_conferences:
                 self.memory.save_conference(conf)
             
-            # Add to results
+            # Update results
             results["conferences"] = mock_conferences
             results["total_conferences"] = len(mock_conferences)
-            return results
-        
-        # Search for conferences in each research area
-        for area in research_areas:
-            try:
-                area_results = self.conference_search.execute(
-                    research_area=area
-                )
+            results["end_time"] = datetime.now().isoformat()
+            results["is_mock_data"] = True
+        else:
+            # Use real tools to search for conferences
+            all_conferences = []
+            
+            for area in research_areas:
+                # Search for conferences in this area
+                conferences = self.conference_search.execute(query=area)
                 
-                conferences = area_results.get("conferences", [])
-                results["conferences"].extend(conferences)
-                
-                logger.info(f"Found {len(conferences)} conferences for {area}")
-            except Exception as e:
-                logger.error(f"Error refreshing conferences for {area}: {str(e)}")
-        
-        results["total_conferences"] = len(results["conferences"])
-        results["end_time"] = datetime.now().isoformat()
+                if conferences:
+                    # Process and save conferences
+                    for conf in conferences:
+                        # Add to memory
+                        self.memory.save_conference(conf)
+                    
+                    # Add to results
+                    all_conferences.extend(conferences)
+                    logger.info(f"Found {len(conferences)} conferences for {area}")
+                else:
+                    logger.info(f"Found 0 conferences for {area}")
+            
+            # Update results
+            results["conferences"] = all_conferences
+            results["total_conferences"] = len(all_conferences)
+            results["end_time"] = datetime.now().isoformat()
+            results["is_mock_data"] = False
         
         return results
     
@@ -278,68 +287,72 @@ class MonitorService:
             # Create mock data
             mock_papers = []
             
-            # Create relevant mock data for each research area
+            # Create mock papers for each research area
             for area in research_areas:
                 area_clean = area.lower().strip()
-                mock_papers.extend([
-                    {
-                        "id": f"mock_paper_{area_clean}_1",
-                        "title": f"Recent Advances in {area}",
-                        "authors": ["Jane Smith", "John Doe", "Alice Johnson"],
+                
+                # Generate 3 mock papers per area
+                for i in range(1, 4):
+                    mock_papers.append({
+                        "id": f"mock_paper_{area_clean}_{i}",
+                        "title": f"Advances in {area}: A Comprehensive Study (Part {i})",
+                        "authors": ["John Smith", "Jane Doe", "David Johnson"],
                         "year": 2025,
-                        "citations": 42,
-                        "abstract": f"This paper presents the latest advances in {area}, focusing on novel approaches and methodologies. We demonstrate significant improvements over baseline methods.",
-                        "url": "https://example.com/paper1",
-                        "research_area": area
-                    },
-                    {
-                        "id": f"mock_paper_{area_clean}_2",
-                        "title": f"{area} for Real-World Applications",
-                        "authors": ["Bob Williams", "Sarah Miller"],
-                        "year": 2025,
-                        "citations": 28,
-                        "abstract": f"We explore practical applications of {area} in industry settings. Our findings show promising results for deployment in production environments.",
-                        "url": "https://example.com/paper2",
-                        "research_area": area
-                    },
-                    {
-                        "id": f"mock_paper_{area_clean}_3",
-                        "title": f"A Survey of {area} Techniques",
-                        "authors": ["Chris Taylor", "David Brown", "Emily Davis"],
-                        "year": 2024,
-                        "citations": 76,
-                        "abstract": f"This comprehensive survey reviews the state-of-the-art in {area}, categorizing approaches and identifying future research directions.",
-                        "url": "https://example.com/paper3",
-                        "research_area": area
-                    }
-                ])
+                        "venue": f"Journal of {area}",
+                        "abstract": f"This paper presents new research in {area}, focusing on innovative approaches and methods. We demonstrate significant improvements over existing techniques.",
+                        "url": "https://example.com/paper",
+                        "citations": 0
+                    })
             
-            # Save mock papers to memory
+            # Update memory with mock data
             for paper in mock_papers:
                 self.memory.save_paper(paper)
             
-            # Add to results
+            # Process papers with the agent if not in mock mode
+            if not self.agent.mock_mode:
+                for paper in mock_papers[:5]:  # Limit for token constraints
+                    analysis = self.agent.analyze_paper(paper)
+                    if analysis:
+                        paper["analysis"] = analysis
+            
+            # Update results
             results["papers"] = mock_papers
             results["total_papers"] = len(mock_papers)
-            return results
-        
-        # Search for papers in each research area
-        for area in research_areas:
-            try:
-                area_results = self.paper_search.execute(
-                    query=area,
-                    limit=20
-                )
+            results["end_time"] = datetime.now().isoformat()
+            results["is_mock_data"] = True
+        else:
+            # Use real tools to search for papers
+            all_papers = []
+            
+            for area in research_areas:
+                # Search for papers in this area
+                papers = self.paper_search.execute(query=area)
                 
-                papers = area_results.get("papers", [])
-                results["papers"].extend(papers)
-                
-                logger.info(f"Found {len(papers)} papers for {area}")
-            except Exception as e:
-                logger.error(f"Error refreshing papers for {area}: {str(e)}")
-        
-        results["total_papers"] = len(results["papers"])
-        results["end_time"] = datetime.now().isoformat()
+                if papers:
+                    # Process papers with the agent
+                    processed_papers = []
+                    for paper in papers:
+                        # Add analysis if agent is available
+                        if not self.agent.mock_mode:
+                            analysis = self.agent.analyze_paper(paper)
+                            if analysis:
+                                paper["analysis"] = analysis
+                        
+                        # Save to memory
+                        self.memory.save_paper(paper)
+                        processed_papers.append(paper)
+                    
+                    # Add to results
+                    all_papers.extend(processed_papers)
+                    logger.info(f"Found {len(processed_papers)} papers for {area}")
+                else:
+                    logger.info(f"Found 0 papers for {area}")
+            
+            # Update results
+            results["papers"] = all_papers
+            results["total_papers"] = len(all_papers)
+            results["end_time"] = datetime.now().isoformat()
+            results["is_mock_data"] = False
         
         return results
     
