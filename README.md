@@ -55,7 +55,7 @@ The Agentic Conference Crawler consists of two main components:
 1. Clone the repository:
 
    ```bash
-   [git clone https://github.com/yourusername/Agentic_Conference_Crawler.git](https://github.com/Michael-Susu12138/Agentic_Conference_Crawler.git)
+   git clone https://github.com/yourusername/Agentic_Conference_Crawler.git
    cd Agentic_Conference_Crawler
    ```
 
