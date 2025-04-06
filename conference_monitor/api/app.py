@@ -9,6 +9,8 @@ import logging
 from dotenv import load_dotenv
 import json
 from pathlib import Path
+from datetime import datetime
+import sqlite3
 
 # Load environment variables
 load_dotenv()
@@ -57,18 +59,103 @@ def get_status():
 def get_conferences():
     """Get all tracked conferences"""
     research_area = request.args.get('area', None)
+    
+    try:
+        # Use direct database access for better performance
+        db_path = memory.db_file
+        
+        if os.path.exists(db_path):
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Get current date
+            current_date = datetime.now().isoformat()[:10]  # YYYY-MM-DD format
+            
+            query = """
+            SELECT data FROM conferences 
+            WHERE end_date >= ? 
+            """
+            params = [current_date]
+            
+            if research_area:
+                query += "AND (research_areas LIKE ? OR title LIKE ? OR description LIKE ?)"
+                search_term = f"%{research_area.lower()}%"
+                params.extend([search_term, search_term, search_term])
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            
+            # Process results and deduplicate
+            seen_titles = set()
+            unique_conferences = []
+            
+            for row in rows:
+                conf = json.loads(row['data'])
+                title = conf.get('title', '').strip().lower()
+                
+                if title and title not in seen_titles:
+                    seen_titles.add(title)
+                    unique_conferences.append(conf)
+            
+            conn.close()
+            return jsonify(unique_conferences)
+    except Exception as e:
+        logger.error(f"Database query error: {str(e)}")
+        # Fall back to file-based approach if database fails
+    
+    # Fallback to the file-based approach
     conferences = memory.load_conferences()
     
+    # Get current date
+    current_date = datetime.now()
+    
+    # Filter out invalid conferences (missing required fields)
+    valid_conferences = [
+        conf for conf in conferences 
+        if 'title' in conf and conf['title'] and 'id' in conf
+    ]
+    
+    # Filter only upcoming conferences
+    upcoming_conferences = []
+    seen_titles = set()  # For deduplication
+    
+    for conf in valid_conferences:
+        # Only add conference if its title hasn't been seen yet (deduplication)
+        conf_title = conf.get('title', '').strip().lower()
+        
+        if conf_title in seen_titles:
+            continue
+            
+        # Check if conference is upcoming
+        is_upcoming = True
+        
+        # Parse end_date if it exists
+        if 'end_date' in conf and conf['end_date']:
+            try:
+                end_date = datetime.fromisoformat(conf['end_date'].replace('Z', '+00:00'))
+                is_upcoming = end_date > current_date
+            except (ValueError, TypeError):
+                # If date parsing fails, try to guess from dates string
+                dates_str = conf.get('dates', '').lower()
+                if dates_str and any(year in dates_str for year in ['2020', '2021', '2022', '2023']):
+                    is_upcoming = False
+        
+        if is_upcoming:
+            upcoming_conferences.append(conf)
+            seen_titles.add(conf_title)
+    
+    # Apply research area filter if provided
     if research_area:
-        # Filter by research area if provided
         filtered_conferences = [
-            conf for conf in conferences 
+            conf for conf in upcoming_conferences 
             if research_area.lower() in conf.get('description', '').lower() or
-               research_area.lower() in conf.get('title', '').lower()
+               research_area.lower() in conf.get('title', '').lower() or
+               research_area.lower() in ', '.join(conf.get('research_areas', [])).lower()
         ]
         return jsonify(filtered_conferences)
     
-    return jsonify(conferences)
+    return jsonify(upcoming_conferences)
 
 @app.route('/api/conferences/refresh', methods=['POST'])
 def refresh_conferences():

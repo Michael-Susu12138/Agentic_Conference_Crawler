@@ -108,3 +108,46 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Frontend
+
+The project now includes a React frontend that provides a user-friendly interface for interacting with the Conference Monitor API.
+
+### Frontend Features:
+
+- Home page with quick access to all features
+- Conference listing and filtering
+- Research paper management
+- Trending topics visualization
+- AI-powered query interface
+- Dark mode support
+- Responsive design for mobile and desktop
+
+### Running the Frontend:
+
+1. Navigate to the frontend directory:
+
+   ```
+   cd frontend
+   ```
+
+2. Install dependencies:
+
+   ```
+   npm install
+   ```
+
+3. Start the development server:
+
+   ```
+   npm run dev
+   ```
+
+4. Access the frontend in your browser at `http://localhost:5173`
+
+### Frontend Technology Stack:
+
+- React.js - UI library
+- Material UI - Component library
+- React Router - Navigation
+- Axios - API communication

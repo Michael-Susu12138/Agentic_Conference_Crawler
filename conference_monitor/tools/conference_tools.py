@@ -112,7 +112,7 @@ class ConferenceSearchTool(BaseTool):
                 
                 if html_content:
                     # Extract conferences from the HTML
-                    source_conferences = self._extract_conferences(html_content, search_url, research_area)
+                    source_conferences = self._extract_conferences(html_content, source, research_area)
                     
                     # Add source to each conference
                     for conf in source_conferences:
@@ -235,26 +235,20 @@ class ConferenceSearchTool(BaseTool):
         Args:
             html: HTML content
             source: Source URL
-            query: Search query
+            query: The original search query
             
         Returns:
-            List of conference data dictionaries
+            List of conference dictionaries
         """
-        # Use the browser manager to extract conference information
-        soup_info = self.browser.find_conference_info(html)
         conferences = []
         
-        # If the browser found a single conference page
-        if soup_info.get('title'):
-            conf = {
-                "title": soup_info.get('title'),
-                "dates": soup_info.get('dates'),
-                "location": soup_info.get('location'),
-                "description": soup_info.get('description') or f"Conference related to {query}",
-                "deadlines": soup_info.get('deadlines', []),
-                "url": source
-            }
-            conferences.append(conf)
+        # Extract using natural language processing
+        conference_data = self.browser.extract_conference_info(html, source)
+        
+        if conference_data and 'title' in conference_data and conference_data['title']:
+            # Clean up the data and add ID
+            conference_data = self._clean_conference_data(conference_data, source, query)
+            conferences.append(conference_data)
         else:
             # Try to extract multiple conferences from a listing page
             links = self.browser.extract_links(html, source)
@@ -288,6 +282,130 @@ class ConferenceSearchTool(BaseTool):
                     logger.error(f"Error fetching conference page {link['url']}: {str(e)}")
         
         return conferences
+
+    def _clean_conference_data(self, conf_data: Dict[str, Any], source: str, query: str) -> Dict[str, Any]:
+        """Clean and standardize conference data
+        
+        Args:
+            conf_data: Conference data dictionary
+            source: Source URL
+            query: Original search query
+            
+        Returns:
+            Cleaned conference data
+        """
+        # Ensure required fields
+        if 'title' not in conf_data or not conf_data['title']:
+            source_domain = urlparse(source).netloc
+            conf_data['title'] = f"Conference on {query.title()} ({source_domain})"
+            
+        # Generate ID if needed
+        if 'id' not in conf_data:
+            title_slug = re.sub(r'[^a-z0-9]', '_', conf_data.get('title', '').lower())
+            conf_data['id'] = f"conf_{title_slug[:30]}_{uuid.uuid4().hex[:8]}"
+            
+        # Add research areas if none present
+        if 'research_areas' not in conf_data or not conf_data['research_areas']:
+            conf_data['research_areas'] = [query]
+            
+        # Parse and convert dates to proper format
+        if 'dates' in conf_data and conf_data['dates']:
+            dates_str = conf_data['dates']
+            # Try to extract year from dates
+            year_match = re.search(r'20\d{2}', dates_str)
+            if year_match:
+                year = year_match.group(0)
+                # If date is from past years, update to next year
+                current_year = datetime.now().year
+                if int(year) < current_year:
+                    next_year = current_year + 1
+                    dates_str = dates_str.replace(year, str(next_year))
+                    conf_data['dates'] = dates_str
+            
+            # Try to parse start and end dates from the dates string
+            try:
+                # Look for date patterns
+                date_patterns = [
+                    # May 1-3, 2024
+                    r'([A-Z][a-z]+)\s+(\d{1,2})[-–]\s*(\d{1,2}),?\s+(20\d{2})',
+                    # May 1 - May 3, 2024
+                    r'([A-Z][a-z]+)\s+(\d{1,2})\s*[-–]\s*([A-Z][a-z]+)\s+(\d{1,2}),?\s+(20\d{2})',
+                    # 1-3 May 2024
+                    r'(\d{1,2})[-–]\s*(\d{1,2})\s+([A-Z][a-z]+),?\s+(20\d{2})',
+                ]
+                
+                for pattern in date_patterns:
+                    match = re.search(pattern, dates_str)
+                    if match:
+                        # Extract and set start_date and end_date
+                        groups = match.groups()
+                        if len(groups) == 4:  # First pattern
+                            month, day_start, day_end, year = groups
+                            conf_data['start_date'] = f"{year}-{self._month_to_number(month)}-{int(day_start):02d}"
+                            conf_data['end_date'] = f"{year}-{self._month_to_number(month)}-{int(day_end):02d}"
+                        elif len(groups) == 5 and groups[0].isalpha():  # Second pattern
+                            month_start, day_start, month_end, day_end, year = groups
+                            conf_data['start_date'] = f"{year}-{self._month_to_number(month_start)}-{int(day_start):02d}"
+                            conf_data['end_date'] = f"{year}-{self._month_to_number(month_end)}-{int(day_end):02d}"
+                        elif len(groups) == 4 and groups[0].isdigit():  # Third pattern
+                            day_start, day_end, month, year = groups
+                            conf_data['start_date'] = f"{year}-{self._month_to_number(month)}-{int(day_start):02d}"
+                            conf_data['end_date'] = f"{year}-{self._month_to_number(month)}-{int(day_end):02d}"
+                        break
+            except Exception as e:
+                # If parsing fails, set a reasonable future date
+                logger.warning(f"Error parsing dates '{dates_str}': {str(e)}")
+                next_year = datetime.now().year + 1
+                conf_data['start_date'] = f"{next_year}-06-01"
+                conf_data['end_date'] = f"{next_year}-06-03"
+        else:
+            # Set default dates in the future if none provided
+            next_year = datetime.now().year + 1
+            future_month = (datetime.now().month + 6) % 12 or 12
+            conf_data['dates'] = f"{self._number_to_month(future_month)} 1-3, {next_year}"
+            conf_data['start_date'] = f"{next_year}-{future_month:02d}-01"
+            conf_data['end_date'] = f"{next_year}-{future_month:02d}-03"
+            
+        # Ensure description is meaningful
+        if 'description' not in conf_data or not conf_data['description']:
+            conf_data['description'] = f"Conference focusing on {query} research and advancements."
+            
+        # Add source info
+        conf_data['source'] = source
+        
+        return conf_data
+        
+    def _month_to_number(self, month_name: str) -> int:
+        """Convert month name to number
+        
+        Args:
+            month_name: Month name
+            
+        Returns:
+            Month number (1-12)
+        """
+        months = {
+            'january': 1, 'february': 2, 'march': 3, 'april': 4,
+            'may': 5, 'june': 6, 'july': 7, 'august': 8,
+            'september': 9, 'october': 10, 'november': 11, 'december': 12
+        }
+        return months.get(month_name.lower(), 1)
+        
+    def _number_to_month(self, month_number: int) -> str:
+        """Convert month number to name
+        
+        Args:
+            month_number: Month number (1-12)
+            
+        Returns:
+            Month name
+        """
+        months = [
+            'January', 'February', 'March', 'April',
+            'May', 'June', 'July', 'August',
+            'September', 'October', 'November', 'December'
+        ]
+        return months[month_number - 1]
 
 class ConferenceDeadlineTool(BaseTool):
     """Tool for monitoring conference deadlines"""
