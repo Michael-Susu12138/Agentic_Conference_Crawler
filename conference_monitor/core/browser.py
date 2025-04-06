@@ -16,13 +16,12 @@ logger = logging.getLogger(__name__)
 class BrowserManager:
     """Manages web browsing and content extraction"""
     
-    def __init__(self, headers: Optional[Dict[str, str]] = None, timeout: int = 10, mock_mode: bool = False):
+    def __init__(self, headers: Optional[Dict[str, str]] = None, timeout: int = 10):
         """Initialize the browser manager
         
         Args:
             headers: Custom headers for HTTP requests
             timeout: Timeout for HTTP requests in seconds
-            mock_mode: Whether to run in mock mode
         """
         self.timeout = timeout
         self.headers = headers or {
@@ -30,7 +29,6 @@ class BrowserManager:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5"
         }
-        self.mock_mode = mock_mode
         
         # Used to avoid overloading servers
         self.last_request_time = 0
@@ -192,9 +190,6 @@ class BrowserManager:
         Returns:
             HTML content
         """
-        if self.mock_mode:
-            return self._get_mock_content(url)
-        
         try:
             # Set headers to mimic a browser
             headers = {
@@ -221,93 +216,4 @@ class BrowserManager:
                 return ""
         except Exception as e:
             logger.error(f"Error fetching {url}: {str(e)}")
-            return ""
-
-    def _get_mock_content(self, url: str) -> str:
-        """Get mock content for the given URL
-        
-        Args:
-            url: URL to get mock content for
-            
-        Returns:
-            Mock HTML content
-        """
-        # Parse the domain from the URL
-        domain = urlparse(url).netloc
-        
-        # Return different mock content based on the domain
-        if "ieee.org" in domain:
-            return """
-            <html>
-                <head><title>IEEE Conferences</title></head>
-                <body>
-                    <h1>IEEE Conferences</h1>
-                    <p>The world's largest professional organization dedicated to advancing technology.</p>
-                    <div class="conferences">
-                        <h2>Upcoming Conferences</h2>
-                        <ul>
-                            <li><a href="#">IEEE International Conference on Artificial Intelligence</a> - October 15-17, 2025</li>
-                            <li><a href="#">IEEE International Conference on Machine Learning</a> - September 5-7, 2025</li>
-                            <li><a href="#">IEEE Conference on Computer Vision</a> - November 20-22, 2025</li>
-                        </ul>
-                    </div>
-                </body>
-            </html>
-            """
-        elif "acm.org" in domain:
-            return """
-            <html>
-                <head><title>ACM Conferences</title></head>
-                <body>
-                    <h1>ACM Conferences</h1>
-                    <p>Association for Computing Machinery - Advancing Computing as a Science & Profession</p>
-                    <div class="conferences">
-                        <h2>Upcoming Events</h2>
-                        <ul>
-                            <li><a href="#">ACM Symposium on Machine Learning</a> - May 5-7, 2025</li>
-                            <li><a href="#">ACM Conference on Data Mining</a> - June 10-12, 2025</li>
-                            <li><a href="#">ACM Workshop on Natural Language Processing</a> - April 15-16, 2025</li>
-                        </ul>
-                    </div>
-                </body>
-            </html>
-            """
-        elif "neurips" in domain:
-            return """
-            <html>
-                <head><title>NeurIPS Conference</title></head>
-                <body>
-                    <h1>Neural Information Processing Systems (NeurIPS)</h1>
-                    <p>The premier machine learning conference.</p>
-                    <div class="conference-info">
-                        <h2>NeurIPS 2025</h2>
-                        <p>Dates: December 1-7, 2025</p>
-                        <p>Location: Vancouver, Canada</p>
-                        <h3>Deadlines</h3>
-                        <ul>
-                            <li>Paper Submission: May 15, 2025</li>
-                            <li>Registration: November 1, 2025</li>
-                        </ul>
-                    </div>
-                </body>
-            </html>
-            """
-        else:
-            # Generic conference listing
-            return """
-            <html>
-                <head><title>Academic Conferences</title></head>
-                <body>
-                    <h1>Academic Conferences</h1>
-                    <p>Find the latest research conferences in your field.</p>
-                    <div class="conferences">
-                        <h2>Upcoming Conferences</h2>
-                        <ul>
-                            <li><a href="#">International Conference on Machine Learning</a> - July 15-17, 2025</li>
-                            <li><a href="#">Global AI Summit</a> - August 20-22, 2025</li>
-                            <li><a href="#">Annual Computer Science Symposium</a> - September 22-24, 2025</li>
-                        </ul>
-                    </div>
-                </body>
-            </html>
-            """ 
+            return "" 

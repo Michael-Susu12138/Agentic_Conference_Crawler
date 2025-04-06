@@ -33,8 +33,8 @@ def setup_services():
     Returns:
         Tuple of (agent, memory, browser, monitor_service, report_service)
     """
-    # Create agent with mock_mode=False to use the real API
-    agent = ConferenceAgent(mock_mode=False)
+    # Create agent
+    agent = ConferenceAgent()
     
     # Create memory
     memory = AgentMemory()
@@ -42,8 +42,8 @@ def setup_services():
     # Create browser
     browser = BrowserManager()
     
-    # Create services with mock_mode=False
-    monitor_service = MonitorService(agent=agent, memory=memory, browser=browser, mock_mode=False)
+    # Create services
+    monitor_service = MonitorService(agent=agent, memory=memory, browser=browser)
     report_service = ReportService(agent=agent, memory=memory)
     
     return agent, memory, browser, monitor_service, report_service
@@ -108,24 +108,23 @@ def run_monitor(research_areas: Optional[List[str]] = None, run_once: bool = Fal
             logger.info("Stopping monitoring due to keyboard interrupt")
             monitor_service.stop_monitoring()
 
-def run_streamlit():
-    """Run the Streamlit UI"""
-    # Import here to avoid dependency if not using the UI
-    import subprocess
+def run_api(port: int = 5000):
+    """Run the Flask API server
     
-    logger.info("Starting Streamlit UI")
+    Args:
+        port: Port to run the API server on
+    """
+    # Import here to avoid dependency if not using the API
+    from conference_monitor.api import app
     
-    # Get the path to the streamlit app
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    streamlit_app_path = os.path.join(current_dir, "ui", "streamlit_app.py")
+    logger.info(f"Starting API server on port {port}")
     
-    # Run Streamlit
     try:
-        subprocess.run(["streamlit", "run", streamlit_app_path], check=True)
+        app.run(debug=True, host='0.0.0.0', port=port)
     except KeyboardInterrupt:
-        logger.info("Stopping Streamlit UI due to keyboard interrupt")
+        logger.info("Stopping API server due to keyboard interrupt")
     except Exception as e:
-        logger.error(f"Error running Streamlit UI: {str(e)}")
+        logger.error(f"Error running API server: {str(e)}")
 
 def generate_report(report_type: str, research_area: Optional[str] = None):
     """Generate a report
@@ -179,8 +178,11 @@ def main():
         "--once", "-o", action="store_true", help="Run once and exit"
     )
     
-    # UI command
-    ui_parser = subparsers.add_parser("ui", help="Run the Streamlit UI")
+    # API command
+    api_parser = subparsers.add_parser("api", help="Run the API server")
+    api_parser.add_argument(
+        "--port", "-p", type=int, default=5000, help="Port to run the API server on"
+    )
     
     # Report command
     report_parser = subparsers.add_parser("report", help="Generate a report")
@@ -197,13 +199,13 @@ def main():
     # Run the appropriate command
     if args.command == "monitor":
         run_monitor(research_areas=args.areas, run_once=args.once)
-    elif args.command == "ui":
-        run_streamlit()
+    elif args.command == "api":
+        run_api(port=args.port)
     elif args.command == "report":
         generate_report(report_type=args.type, research_area=args.area)
     else:
-        # Default to UI if no command specified
-        run_streamlit()
+        # Default to API if no command specified
+        run_api()
 
 if __name__ == "__main__":
     main() 

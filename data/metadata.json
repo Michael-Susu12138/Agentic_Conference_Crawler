@@ -1,16 +1,19 @@
 {
-  "last_updated": "2025-04-05T22:06:46.302122",
+  "last_updated": "2025-04-05T23:04:02.321244",
   "tracked_conferences": [
-    "mock_conf_machine learning for healthcare_1",
-    "mock_conf_machine learning for healthcare_2",
-    "mock_conf_machine learning_1",
-    "mock_conf_machine learning_2",
-    "mock_conf_general_1",
-    "mock_conf_general_2"
+    "conf_001",
+    "conf_002",
+    "conf_acm_conferences___april__2025_4889827331375037353",
+    "conf_main_navigation_-7945269022683417029",
+    "conf_acm_conferences___april__2025_-6090964224289986225",
+    "conf_main_navigation_1524352686542850494"
   ],
   "tracked_research_areas": [
     "machine learning",
-    "Machine Learning"
+    "artificial intelligence",
+    "deep learning",
+    "reinforcement learning",
+    "natural language processing"
   ],
   "version": "1.0.0"
 }

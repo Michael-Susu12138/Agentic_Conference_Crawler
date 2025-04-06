@@ -34,6 +34,10 @@ def is_valid_google_api_key(api_key: str) -> bool:
     if not api_key:
         return False
         
+    # Skip validation if the key is a mock key for testing
+    if api_key == "mock_google_api_key":
+        return True
+        
     # Test the API key with the generateContent endpoint (same as our test script)
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
@@ -74,8 +78,7 @@ class ConferenceAgent:
                  model_name: str = DEFAULT_LLM_MODEL,
                  provider: str = DEFAULT_LLM_PROVIDER,
                  api_key: Optional[str] = None,
-                 verbose: bool = False,
-                 mock_mode: bool = False):
+                 verbose: bool = False):
         """Initialize the conference agent
         
         Args:
@@ -83,56 +86,45 @@ class ConferenceAgent:
             provider: LLM provider ('google' or 'openai')
             api_key: API key (uses one from config if not provided)
             verbose: Whether to log detailed information
-            mock_mode: If True, use mock responses instead of API calls
         """
         self.verbose = verbose
         self.provider = provider
-        self.mock_mode = mock_mode
         
         # Set API key based on provider
         if provider == 'google':
             self.api_key = api_key or GOOGLE_API_KEY
             
             # Validate Google API key
-            if not mock_mode and not is_valid_google_api_key(self.api_key):
-                logger.warning("Google API key is invalid. Running in mock mode.")
-                self.mock_mode = True
+            if not is_valid_google_api_key(self.api_key):
+                raise ValueError("Invalid Google API key. Please provide a valid API key.")
         else:  # default to openai
             self.api_key = api_key or OPENAI_API_KEY
         
-        # Check for API key if not in mock mode
-        if not self.mock_mode and not self.api_key:
-            logger.warning(f"{provider.capitalize()} API key not found. Running in mock mode.")
-            self.mock_mode = True
+        # Check for API key
+        if not self.api_key:
+            raise ValueError(f"No {provider.capitalize()} API key found. Please provide a valid API key.")
         
-        # Initialize LLM if not in mock mode
-        if not self.mock_mode:
-            if self.provider == 'google':
-                try:
-                    self.llm = ChatGoogleGenerativeAI(
-                        model=model_name,
-                        temperature=0.2,
-                        google_api_key=self.api_key,
-                        verbose=verbose
-                    )
-                    logger.info(f"Using Google Gemini model: {model_name}")
-                except Exception as e:
-                    logger.warning(f"Error initializing Google Gemini model: {str(e)}")
-                    logger.warning("Falling back to mock mode.")
-                    self.mock_mode = True
-                    self.llm = None
-            else:
-                self.llm = ChatOpenAI(
+        # Initialize LLM
+        if self.provider == 'google':
+            try:
+                self.llm = ChatGoogleGenerativeAI(
                     model=model_name,
                     temperature=0.2,
-                    openai_api_key=self.api_key,
+                    google_api_key=self.api_key,
                     verbose=verbose
                 )
-                logger.info(f"Using OpenAI model: {model_name}")
-        
-        if self.mock_mode:
-            self.llm = None
-            logger.info("Running in mock mode - no API calls will be made")
+                logger.info(f"Using Google Gemini model: {model_name}")
+            except Exception as e:
+                logger.error(f"Error initializing Google Gemini model: {str(e)}")
+                raise ValueError(f"Failed to initialize Google Gemini model: {str(e)}")
+        else:
+            self.llm = ChatOpenAI(
+                model=model_name,
+                temperature=0.2,
+                openai_api_key=self.api_key,
+                verbose=verbose
+            )
+            logger.info(f"Using OpenAI model: {model_name}")
         
         # Initialize memory
         self.memory = AgentMemory()
@@ -151,11 +143,6 @@ class ConferenceAgent:
         Returns:
             The LLM's response as a string
         """
-        if self.mock_mode:
-            # Return a mock response instead of calling the API
-            logger.info(f"Mock mode: Query received: {query[:50]}...")
-            return "This is a mock response since no API key is available."
-        
         try:
             prompt_template = f"{system_prompt}\n\n{{query}}" if system_prompt else "{query}"
             prompt = PromptTemplate(template=prompt_template, input_variables=["query"])
@@ -180,14 +167,6 @@ class ConferenceAgent:
         
         if not title or not abstract:
             return {"error": "Paper data missing required fields (title, abstract)"}
-        
-        if self.mock_mode:
-            # Return mock analysis
-            return {
-                "paper_id": paper_data.get("id", ""),
-                "title": title,
-                "analysis": "Mock analysis: This paper presents interesting findings in the field."
-            }
         
         query = f"""
         Analyze the following research paper:
@@ -219,16 +198,6 @@ class ConferenceAgent:
         Returns:
             List of trending topic strings
         """
-        if self.mock_mode:
-            # Return mock trending topics
-            return [
-                "1. Machine Learning for Healthcare",
-                "2. Transformer Models for NLP",
-                "3. Reinforcement Learning Advancements",
-                "4. Computer Vision Applications",
-                "5. Ethical AI and Fairness"
-            ]
-        
         # Prepare paper data for LLM
         paper_info = []
         for i, paper in enumerate(papers[:20]):  # Limit to 20 papers for token constraints
@@ -248,9 +217,11 @@ class ConferenceAgent:
         
         # Process response
         trends = []
-        for line in response.split("\n"):
-            line = line.strip()
-            if line and (line.startswith("-") or line.startswith("•") or any(str(i) in line[:3] for i in range(1, 6))):
-                trends.append(line)
+        if response and ":" in response:
+            for line in response.split("\n"):
+                line = line.strip()
+                if line and (line.startswith(("- ", "• ", "* ")) or
+                             (line[0].isdigit() and line[1:].startswith((". ", ") ")))):
+                    trends.append(line)
         
-        return trends 
+        return trends or ["No clear trends identified"] 

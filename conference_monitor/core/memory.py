@@ -122,6 +122,14 @@ class AgentMemory:
         
         return conferences
     
+    def load_conferences(self) -> List[Dict[str, Any]]:
+        """Load all tracked conferences
+        
+        Returns:
+            List of conference data dictionaries
+        """
+        return self.list_conferences()
+    
     def save_paper(self, paper_data: Dict[str, Any]):
         """Save paper data to memory
         
@@ -186,6 +194,17 @@ class AgentMemory:
                 papers.append(paper)
         
         return papers
+    
+    def load_papers(self, filter_dict: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Load papers, optionally filtered by properties
+        
+        Args:
+            filter_dict: Dictionary of key-value pairs to filter papers by
+            
+        Returns:
+            List of paper data dictionaries
+        """
+        return self.list_papers(filter_dict)
     
     def save_trend(self, trend_data: Dict[str, Any]):
         """Save trend data to memory

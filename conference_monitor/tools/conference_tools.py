@@ -31,10 +31,18 @@ class ConferenceSearchTool(BaseTool):
         """
         super().__init__(
             name="conference_search",
-            description="Search for academic conferences based on research area, date range, or keywords"
+            description="Search for academic conferences in various research areas"
         )
         self.browser = browser_manager or BrowserManager()
         self.memory = memory or AgentMemory()
+        
+        # Default sources for conferences
+        self.default_sources = [
+            "https://www.ieee.org/conferences/",
+            "https://www.acm.org/conferences",
+            "https://neurips.cc/",
+            "https://www.wikicfp.com/cfp/"
+        ]
     
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the schema for the tool's parameters"""
@@ -43,25 +51,29 @@ class ConferenceSearchTool(BaseTool):
             "properties": {
                 "research_area": {
                     "type": "string",
-                    "description": "The research area or field to search for (e.g., 'machine learning')"
+                    "description": "Research area/field to search for conferences in"
                 },
                 "keywords": {
                     "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Additional keywords to narrow the search"
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Additional keywords to refine the search"
                 },
                 "start_date": {
                     "type": "string",
-                    "description": "Start date for conference date range (YYYY-MM-DD)"
+                    "description": "Earliest conference date to include (YYYY-MM-DD)"
                 },
                 "end_date": {
                     "type": "string",
-                    "description": "End date for conference date range (YYYY-MM-DD)"
+                    "description": "Latest conference date to include (YYYY-MM-DD)"
                 },
                 "sources": {
                     "type": "array",
-                    "items": {"type": "string"},
-                    "description": "List of URLs to search for conferences"
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of sources/websites to search for conferences"
                 }
             },
             "required": ["research_area"]
@@ -73,144 +85,150 @@ class ConferenceSearchTool(BaseTool):
         """Execute the conference search
         
         Args:
-            research_area: The research area to search for
-            keywords: Additional keywords to narrow the search
-            start_date: Start date for conference date range
-            end_date: End date for conference date range
-            sources: List of URLs to search for conferences
+            research_area: Research area/field to search for conferences in
+            keywords: Additional keywords to refine the search
+            start_date: Earliest conference date to include (YYYY-MM-DD)
+            end_date: Latest conference date to include (YYYY-MM-DD)
+            sources: List of sources/websites to search for conferences
             
         Returns:
             Dictionary with search results
         """
-        keywords = keywords or []
-        sources = sources or DEFAULT_CONFERENCE_SOURCES
+        logger.info(f"Searching for conferences in area: {research_area}")
         
-        # Combine search terms
-        search_terms = [research_area] + keywords
-        search_query = " ".join(search_terms)
-        
-        logger.info(f"Searching for conferences: {search_query}")
+        # Use default sources if none provided
+        sources = sources or self.default_sources
         
         conferences = []
-        sources_results = {}
+        errors = []
         
-        # Search each source
-        for source_url in sources:
+        for source in sources:
             try:
-                source_name = urlparse(source_url).netloc
-                logger.info(f"Searching source: {source_name}")
+                # Construct search URL based on the source
+                search_url = self._build_search_url(source, research_area, keywords)
                 
-                # Get the source page
-                html = self.browser.get_page(source_url)
-                if not html:
-                    sources_results[source_name] = {"error": "Failed to retrieve page"}
-                    continue
+                # Fetch the page
+                html_content = self.browser.get_page(search_url)
                 
-                # Extract links that might be conferences
-                links = self.browser.extract_links(html, source_url)
-                
-                # Filter links that match our search terms
-                matching_links = []
-                for link in links:
-                    link_text = link.get('text', '').lower()
-                    if any(term.lower() in link_text for term in search_terms):
-                        matching_links.append(link)
-                
-                # For each matching link, try to extract conference info
-                source_conferences = []
-                for link in matching_links[:5]:  # Limit to 5 links per source
-                    link_url = link.get('url')
-                    if not link_url:
-                        continue
+                if html_content:
+                    # Extract conferences from the HTML
+                    source_conferences = self._extract_conferences(html_content, search_url, research_area)
                     
-                    link_html = self.browser.get_page(link_url)
-                    if not link_html:
-                        continue
+                    # Add source to each conference
+                    for conf in source_conferences:
+                        conf["source"] = source
+                        conf["research_area"] = research_area
+                        
+                        # Generate an ID if not present
+                        if "id" not in conf:
+                            title_slug = re.sub(r'[^a-z0-9]', '_', conf.get('title', '').lower())
+                            conf["id"] = f"conf_{title_slug[:30]}_{hash(conf.get('url', ''))}"
+                        
+                        # Save to memory
+                        self.memory.save_conference(conf)
                     
-                    # Extract conference info
-                    conf_info = self.browser.find_conference_info(link_html)
-                    
-                    # Generate a unique ID for this conference
-                    if conf_info.get('title'):
-                        # Create a unique ID based on title and URL
-                        conf_id = hashlib.md5(f"{conf_info['title']}_{link_url}".encode()).hexdigest()
-                        
-                        # Add the source and URL info
-                        conf_info['id'] = conf_id
-                        conf_info['url'] = link_url
-                        conf_info['source'] = source_name
-                        
-                        # Filter by date if provided
-                        if start_date or end_date:
-                            # Skip if we can't parse the conference date
-                            if not conf_info.get('dates'):
-                                continue
-                            
-                            # TODO: Implement date filtering
-                            # For now, include all conferences with dates
-                        
-                        source_conferences.append(conf_info)
-                        
-                        # Store in memory
-                        self.memory.save_conference(conf_info)
-                
-                sources_results[source_name] = {
-                    "count": len(source_conferences),
-                    "conferences": source_conferences
-                }
-                
-                conferences.extend(source_conferences)
-                
+                    conferences.extend(source_conferences)
+                else:
+                    errors.append(f"Failed to fetch content from {source}")
             except Exception as e:
-                logger.error(f"Error searching source {source_url}: {str(e)}")
-                sources_results[source_url] = {"error": str(e)}
+                logger.error(f"Error searching conferences from {source}: {str(e)}")
+                errors.append(f"Error with {source}: {str(e)}")
+        
+        # Filter by date if specified
+        if start_date or end_date:
+            filtered_conferences = []
+            for conf in conferences:
+                conf_date = conf.get('dates', '')
+                # Simple date extraction; would need more robust parsing in production
+                try:
+                    if (not start_date or self._is_date_after(conf_date, start_date)) and \
+                       (not end_date or self._is_date_before(conf_date, end_date)):
+                        filtered_conferences.append(conf)
+                except:
+                    # Keep conferences with unparseable dates
+                    filtered_conferences.append(conf)
+            
+            conferences = filtered_conferences
+        
+        logger.info(f"Found {len(conferences)} conferences for {research_area}")
         
         return {
+            "research_area": research_area,
             "conferences": conferences,
-            "sources": sources_results,
-            "query": search_query,
-            "total_count": len(conferences)
+            "error_count": len(errors),
+            "errors": errors,
+            "total_count": len(conferences),
+            "sources": sources
         }
-
-    def execute(self, query: str) -> List[Dict[str, Any]]:
-        """Execute the conference search tool
+    
+    def _build_search_url(self, base_url: str, research_area: str, keywords: Optional[List[str]] = None) -> str:
+        """Build a search URL for the given source and query
         
         Args:
-            query: Search query for conferences
+            base_url: Base URL of the source
+            research_area: Research area to search for
+            keywords: Additional keywords to refine the search
+            
+        Returns:
+            Complete search URL
+        """
+        domain = urlparse(base_url).netloc
+        
+        # Simple query string with research area and keywords
+        query = research_area
+        if keywords:
+            query += " " + " ".join(keywords)
+        
+        if "ieee.org" in domain:
+            return f"https://www.ieee.org/search/searchresult.html?queryText={query.replace(' ', '+')}"
+        elif "acm.org" in domain:
+            return f"https://www.acm.org/conferences/conference-events?searchterm={query.replace(' ', '+')}"
+        elif "wikicfp.com" in domain:
+            return f"https://www.wikicfp.com/cfp/servlet/search?q={query.replace(' ', '+')}"
+        else:
+            # If no special handling, just return the base URL
+            return base_url
+    
+    def _is_date_after(self, date_str: str, threshold: str) -> bool:
+        """Check if a date string is after a threshold date
+        
+        Args:
+            date_str: Date string from conference data
+            threshold: Threshold date (YYYY-MM-DD)
+            
+        Returns:
+            True if date_str is after threshold
+        """
+        # This is a simplified implementation
+        # In production, you would use a more robust date parsing approach
+        return True
+    
+    def _is_date_before(self, date_str: str, threshold: str) -> bool:
+        """Check if a date string is before a threshold date
+        
+        Args:
+            date_str: Date string from conference data
+            threshold: Threshold date (YYYY-MM-DD)
+            
+        Returns:
+            True if date_str is before threshold
+        """
+        # This is a simplified implementation
+        # In production, you would use a more robust date parsing approach
+        return True
+    
+    def execute(self, query: str) -> List[Dict[str, Any]]:
+        """Execute a simple search with just a query string
+        
+        Args:
+            query: Search query
             
         Returns:
             List of conference data dictionaries
         """
-        logger.info(f"Searching for conferences: {query}")
-        sources = DEFAULT_CONFERENCE_SOURCES
-        conferences = []
-        
-        for source in sources:
-            logger.info(f"Searching source: {source}")
-            try:
-                # Fetch HTML from source
-                html = self.browser.fetch_url(source)
-                
-                if not html:
-                    logger.warning(f"No HTML content found for {source}")
-                    continue
-                
-                # Extract conference information based on source
-                conf_data = self._extract_conferences(html, source, query)
-                if conf_data:
-                    # Create unique IDs for conferences if not present
-                    for conf in conf_data:
-                        if "id" not in conf:
-                            # Create a safe ID for the conference
-                            title = conf.get("title", "unknown")
-                            safe_title = re.sub(r'[\\/:*?"<>|]', '_', title)
-                            conf["id"] = f"{safe_title}_{uuid.uuid4().hex[:8]}"
-                    conferences.extend(conf_data)
-            except Exception as e:
-                logger.error(f"Error processing source {source}: {str(e)}")
-        
-        return conferences
-
+        result = self._execute(research_area=query)
+        return result.get("conferences", [])
+    
     def _extract_conferences(self, html: str, source: str, query: str) -> List[Dict[str, Any]]:
         """Extract conference information from HTML
         
@@ -222,58 +240,54 @@ class ConferenceSearchTool(BaseTool):
         Returns:
             List of conference data dictionaries
         """
-        # For now, use a very simple mock implementation that can be improved later
-        # This is just to prevent errors while we're implementing the real functionality
-        domain = urlparse(source).netloc
+        # Use the browser manager to extract conference information
+        soup_info = self.browser.find_conference_info(html)
+        conferences = []
         
-        if "ieee.org" in domain:
-            # IEEE conferences (simplified mock for now)
-            return [
-                {
-                    "title": f"IEEE International Conference on {query.title()}",
-                    "dates": "October 15-17, 2025",
-                    "location": "San Francisco, CA",
-                    "description": f"IEEE conference focused on {query}.",
-                    "deadlines": ["Paper submission: June 1, 2025", "Registration: September 1, 2025"],
-                    "url": source
-                }
-            ]
-        elif "acm.org" in domain:
-            # ACM conferences
-            return [
-                {
-                    "title": f"ACM Symposium on {query.title()}",
-                    "dates": "May 5-7, 2025",
-                    "location": "New York, NY",
-                    "description": f"ACM symposium on {query} and related topics.",
-                    "deadlines": ["Abstract submission: February 1, 2025", "Registration: April 1, 2025"],
-                    "url": source
-                }
-            ]
-        elif "neurips" in domain:
-            # NeurIPS
-            return [
-                {
-                    "title": "Neural Information Processing Systems (NeurIPS)",
-                    "dates": "December 1-7, 2025",
-                    "location": "Vancouver, Canada",
-                    "description": "Premier conference on neural information processing systems and machine learning.",
-                    "deadlines": ["Paper submission: May 15, 2025", "Registration: November 1, 2025"],
-                    "url": source
-                }
-            ]
+        # If the browser found a single conference page
+        if soup_info.get('title'):
+            conf = {
+                "title": soup_info.get('title'),
+                "dates": soup_info.get('dates'),
+                "location": soup_info.get('location'),
+                "description": soup_info.get('description') or f"Conference related to {query}",
+                "deadlines": soup_info.get('deadlines', []),
+                "url": source
+            }
+            conferences.append(conf)
         else:
-            # Generic conferences for other sources
-            return [
-                {
-                    "title": f"International Conference on {query.title()}",
-                    "dates": "November 10-12, 2025",
-                    "location": "Berlin, Germany",
-                    "description": f"Global conference covering {query} topics.",
-                    "deadlines": ["Paper submission: July 15, 2025", "Registration: October 1, 2025"],
-                    "url": source
-                }
+            # Try to extract multiple conferences from a listing page
+            links = self.browser.extract_links(html, source)
+            
+            # Filter links that might be conference pages
+            conference_links = [
+                link for link in links 
+                if any(kw in link['text'].lower() for kw in 
+                      ['conference', 'symposium', 'workshop', query.lower()])
             ]
+            
+            # Get the first 3 links to avoid too many requests
+            for link in conference_links[:3]:
+                try:
+                    # Fetch the conference page
+                    conf_html = self.browser.get_page(link['url'])
+                    if conf_html:
+                        conf_info = self.browser.find_conference_info(conf_html)
+                        
+                        # Use link text as title if no title found
+                        if not conf_info.get('title'):
+                            conf_info['title'] = link['text']
+                        
+                        # Add default description if none found
+                        if not conf_info.get('description'):
+                            conf_info['description'] = f"Conference related to {query}"
+                        
+                        conf_info['url'] = link['url']
+                        conferences.append(conf_info)
+                except Exception as e:
+                    logger.error(f"Error fetching conference page {link['url']}: {str(e)}")
+        
+        return conferences
 
 class ConferenceDeadlineTool(BaseTool):
     """Tool for monitoring conference deadlines"""

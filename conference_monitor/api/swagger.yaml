@@ -1,0 +1,311 @@
+openapi: 3.0.0
+info:
+  title: Conference Monitor API
+  description: API for monitoring conferences, papers, and research trends
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+paths:
+  /api/status:
+    get:
+      summary: Get API status
+      description: Returns the current status of the API
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: online
+                  version:
+                    type: string
+                    example: 1.0.0
+                  api_provider:
+                    type: string
+                    example: google
+  /api/conferences:
+    get:
+      summary: Get all tracked conferences
+      description: Returns a list of all conferences in the system
+      parameters:
+        - name: area
+          in: query
+          description: Filter conferences by research area
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conference"
+  /api/conferences/refresh:
+    post:
+      summary: Refresh conference data
+      description: Fetches fresh conference data from sources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                research_areas:
+                  type: array
+                  items:
+                    type: string
+                  example: ["artificial intelligence", "machine learning"]
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Found 15 conferences
+  /api/papers:
+    get:
+      summary: Get all tracked papers
+      description: Returns a list of all papers in the system
+      parameters:
+        - name: area
+          in: query
+          description: Filter papers by research area
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Paper"
+  /api/papers/refresh:
+    post:
+      summary: Refresh paper data
+      description: Fetches fresh paper data from sources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                research_areas:
+                  type: array
+                  items:
+                    type: string
+                  example: ["artificial intelligence", "machine learning"]
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Found 25 papers
+  /api/trends:
+    get:
+      summary: Get trending topics
+      description: Analyzes papers to extract trending topics
+      parameters:
+        - name: area
+          in: query
+          description: Research area to analyze
+          required: false
+          schema:
+            type: string
+            default: artificial intelligence
+        - name: count
+          in: query
+          description: Number of papers to analyze
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trends:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/Trend"
+  /api/query:
+    post:
+      summary: Run a direct query against the AI agent
+      description: Allows direct questioning of the AI model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  example: What are the top AI conferences?
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  response:
+                    type: string
+  /api/research-areas:
+    get:
+      summary: Get tracked research areas
+      description: Returns a list of all research areas being tracked
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["artificial intelligence", "machine learning"]
+    post:
+      summary: Update tracked research areas
+      description: Updates the list of research areas to track
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                research_areas:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    [
+                      "artificial intelligence",
+                      "machine learning",
+                      "natural language processing",
+                    ]
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+components:
+  schemas:
+    Conference:
+      type: object
+      properties:
+        id:
+          type: string
+          example: conf_123
+        title:
+          type: string
+          example: International Conference on Artificial Intelligence
+        dates:
+          type: string
+          example: October 15-17, 2025
+        location:
+          type: string
+          example: San Francisco, CA
+        description:
+          type: string
+          example: Leading conference on AI research and applications
+        deadlines:
+          type: array
+          items:
+            type: string
+          example:
+            [
+              "Paper submission: June 1, 2025",
+              "Registration: September 1, 2025",
+            ]
+        url:
+          type: string
+          example: https://example.com/conf
+    Paper:
+      type: object
+      properties:
+        id:
+          type: string
+          example: paper_456
+        title:
+          type: string
+          example: Advances in Large Language Models
+        authors:
+          type: array
+          items:
+            type: string
+          example: ["Jane Smith", "John Doe"]
+        year:
+          type: integer
+          example: 2025
+        abstract:
+          type: string
+        venue:
+          type: string
+          example: Journal of Artificial Intelligence
+        citations:
+          type: integer
+          example: 42
+        url:
+          type: string
+        research_area:
+          type: string
+          example: artificial intelligence
+    Trend:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Multimodal Large Language Models
+        description:
+          type: string
+        relevance:
+          type: number
+          format: float
+          example: 0.85

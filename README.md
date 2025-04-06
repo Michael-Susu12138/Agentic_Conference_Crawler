@@ -9,6 +9,7 @@ An AI-powered agent for tracking academic conferences, papers, and research tren
 - **Paper Monitoring**: Find and summarize recently published papers in specific research areas
 - **Trend Analysis**: Identify trending topics and emerging research directions
 - **Report Generation**: Generate comprehensive reports on conferences, papers, and trends
+- **REST API**: Access all functionality through a clean HTTP API interface
 
 ## Installation
 
@@ -19,14 +20,14 @@ An AI-powered agent for tracking academic conferences, papers, and research tren
 pip install -r requirements.txt
 ```
 
-3. Set up your API keys:
+3. Set up your API keys in the `.env` file:
 
-```bash
-# For OpenAI API
-export OPENAI_API_KEY=your_api_key_here
+```
+# Google API Key (for Gemini)
+GOOGLE_API_KEY=your_google_api_key_here
 
-# For Semantic Scholar (optional)
-export SEMANTIC_SCHOLAR_API_KEY=your_api_key_here
+# OpenAI API Key (alternative)
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ## Usage
@@ -36,8 +37,8 @@ export SEMANTIC_SCHOLAR_API_KEY=your_api_key_here
 The agent can be used through a command-line interface:
 
 ```bash
-# Run the UI
-python -m conference_monitor.main ui
+# Run the API server
+python -m conference_monitor.main api
 
 # Monitor conferences and papers
 python -m conference_monitor.main monitor --areas "artificial intelligence" "machine learning"
@@ -51,19 +52,35 @@ python -m conference_monitor.main report papers --area "machine learning"
 python -m conference_monitor.main report trends
 ```
 
-### Streamlit UI
+### REST API
 
-The agent includes a Streamlit-based user interface:
+The agent provides a RESTful API that can be accessed at `http://localhost:5000`:
 
 ```bash
-# Start the UI
-python -m conference_monitor.main ui
+# Start the API server
+python -m conference_monitor.main api
 ```
 
-Or directly:
+#### API Endpoints
+
+- `GET /api/status` - Get API server status
+- `GET /api/conferences` - List all tracked conferences
+- `POST /api/conferences/refresh` - Refresh conference data
+- `GET /api/papers` - List all tracked papers
+- `POST /api/papers/refresh` - Refresh paper data
+- `GET /api/trends` - Get trending topics in research areas
+- `POST /api/query` - Run direct queries against the AI model
+- `GET /api/research-areas` - List tracked research areas
+- `POST /api/research-areas` - Update tracked research areas
+
+For full API documentation, see `conference_monitor/api/swagger.yaml`.
+
+### Testing the API
+
+Run the included test script to verify the API is working correctly:
 
 ```bash
-streamlit run conference_monitor/ui/streamlit_app.py
+python -m conference_monitor.api.test_api
 ```
 
 ## Architecture
@@ -74,7 +91,7 @@ The system is structured as follows:
 - **Tools**: Specialized tools for searching conferences, papers, and analyzing trends
 - **Models**: Data models for conferences, papers, and trends
 - **Services**: Higher-level services for monitoring and report generation
-- **UI**: Streamlit-based user interface
+- **API**: Flask-based REST API for accessing functionality
 
 ## Extending
 
@@ -82,7 +99,7 @@ To add support for new sources or features:
 
 1. Add new tools in the `tools` directory
 2. Update the relevant services in the `services` directory
-3. Add UI components to the Streamlit app if needed
+3. Add new API endpoints to the Flask app if needed
 
 ## License
 
