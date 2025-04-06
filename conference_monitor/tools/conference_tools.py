@@ -243,7 +243,7 @@ class ConferenceSearchTool(BaseTool):
         conferences = []
         
         # Extract using natural language processing
-        conference_data = self.browser.extract_conference_info(html, source)
+        conference_data = self.browser.find_conference_info(html)
         
         if conference_data and 'title' in conference_data and conference_data['title']:
             # Clean up the data and add ID

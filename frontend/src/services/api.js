@@ -24,10 +24,23 @@ export const ApiService = {
   },
 
   // Conferences endpoints
-  getConferences: async (researchArea = null) => {
+  getConferences: async (params = {}) => {
     try {
-      const params = researchArea ? { area: researchArea } : {};
-      const response = await apiClient.get('/api/conferences', { params });
+      let url = '/api/conferences';
+      
+      // Handle both string and object parameter formats
+      if (typeof params === 'string') {
+        // If it's just a research area string, convert to object
+        url += `?area=${encodeURIComponent(params)}`;
+      } else if (Object.keys(params).length > 0) {
+        // Build query string from params object
+        const queryParams = new URLSearchParams();
+        if (params.area) queryParams.append('area', params.area);
+        if (params.tier) queryParams.append('tier', params.tier);
+        url += `?${queryParams.toString()}`;
+      }
+      
+      const response = await apiClient.get(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching conferences:', error);

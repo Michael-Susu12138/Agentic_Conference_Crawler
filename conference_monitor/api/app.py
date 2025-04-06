@@ -59,6 +59,7 @@ def get_status():
 def get_conferences():
     """Get all tracked conferences"""
     research_area = request.args.get('area', None)
+    tier = request.args.get('tier', None)
     
     try:
         # Use direct database access for better performance
@@ -95,11 +96,21 @@ def get_conferences():
                 title = conf.get('title', '').strip().lower()
                 
                 if title and title not in seen_titles:
+                    # Apply tier filtering if specified
+                    if tier and conf.get('tier') != tier:
+                        continue
+                        
                     seen_titles.add(title)
                     unique_conferences.append(conf)
             
+            # Sort conferences by start_date (chronological order)
+            sorted_conferences = sorted(
+                unique_conferences,
+                key=lambda x: x.get('start_date', '9999-12-31')  # Use far future date as default
+            )
+            
             conn.close()
-            return jsonify(unique_conferences)
+            return jsonify(sorted_conferences)
     except Exception as e:
         logger.error(f"Database query error: {str(e)}")
         # Fall back to file-based approach if database fails
@@ -126,6 +137,10 @@ def get_conferences():
         
         if conf_title in seen_titles:
             continue
+        
+        # Apply tier filtering
+        if tier and conf.get('tier') != tier:
+            continue
             
         # Check if conference is upcoming
         is_upcoming = True
@@ -145,17 +160,23 @@ def get_conferences():
             upcoming_conferences.append(conf)
             seen_titles.add(conf_title)
     
+    # Sort conferences by start_date (chronological order)
+    sorted_conferences = sorted(
+        upcoming_conferences,
+        key=lambda x: x.get('start_date', '9999-12-31')  # Use far future date as default
+    )
+    
     # Apply research area filter if provided
     if research_area:
         filtered_conferences = [
-            conf for conf in upcoming_conferences 
+            conf for conf in sorted_conferences 
             if research_area.lower() in conf.get('description', '').lower() or
                research_area.lower() in conf.get('title', '').lower() or
                research_area.lower() in ', '.join(conf.get('research_areas', [])).lower()
         ]
         return jsonify(filtered_conferences)
     
-    return jsonify(upcoming_conferences)
+    return jsonify(sorted_conferences)
 
 @app.route('/api/conferences/refresh', methods=['POST'])
 def refresh_conferences():

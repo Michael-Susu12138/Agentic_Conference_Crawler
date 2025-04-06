@@ -13,6 +13,7 @@ function Conferences() {
   const [conferences, setConferences] = useState([]);
   const [researchAreas, setResearchAreas] = useState([]);
   const [selectedArea, setSelectedArea] = useState('');
+  const [selectedTier, setSelectedTier] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -41,14 +42,18 @@ function Conferences() {
     fetchData();
   }, []);
 
-  // Filter conferences when research area changes
+  // Filter conferences when research area or tier changes
   useEffect(() => {
     const filterConferences = async () => {
-      if (!selectedArea) return;
+      if (!selectedArea && !selectedTier) return;
       
       setLoading(true);
       try {
-        const filteredData = await ApiService.getConferences(selectedArea);
+        const params = {};
+        if (selectedArea) params.area = selectedArea;
+        if (selectedTier) params.tier = selectedTier;
+        
+        const filteredData = await ApiService.getConferences(params);
         setConferences(filteredData);
         setTotalCount(filteredData.length);
         setLoading(false);
@@ -60,7 +65,7 @@ function Conferences() {
     };
 
     filterConferences();
-  }, [selectedArea]);
+  }, [selectedArea, selectedTier]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -93,6 +98,21 @@ function Conferences() {
   const handleAreaChange = (event) => {
     setSelectedArea(event.target.value);
   };
+  
+  const handleTierChange = (event) => {
+    setSelectedTier(event.target.value);
+  };
+
+  // Helper function to get tier badge color
+  const getTierColor = (tier) => {
+    switch(tier) {
+      case 'A*': return 'error';
+      case 'A': return 'warning';
+      case 'B': return 'success';
+      case 'C': return 'info';
+      default: return 'default';
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -106,7 +126,7 @@ function Conferences() {
 
       {/* Filter and Refresh Controls */}
       <Grid container spacing={2} alignItems="center" sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <FormControl fullWidth variant="outlined">
             <InputLabel id="research-area-label">Filter by Research Area</InputLabel>
             <Select
@@ -126,7 +146,28 @@ function Conferences() {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={6}>
+        
+        <Grid item xs={12} md={4}>
+          <FormControl fullWidth variant="outlined">
+            <InputLabel id="tier-label">Filter by Conference Tier</InputLabel>
+            <Select
+              labelId="tier-label"
+              value={selectedTier}
+              onChange={handleTierChange}
+              label="Filter by Conference Tier"
+            >
+              <MenuItem value="">
+                <em>All Tiers</em>
+              </MenuItem>
+              <MenuItem value="A*">A* (Top Tier)</MenuItem>
+              <MenuItem value="A">A (Excellent)</MenuItem>
+              <MenuItem value="B">B (Good)</MenuItem>
+              <MenuItem value="C">C (Regular)</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        
+        <Grid item xs={12} md={4}>
           <Button
             variant="contained"
             color="primary"
@@ -145,6 +186,7 @@ function Conferences() {
         <Typography variant="subtitle1">
           Showing {totalCount} upcoming conferences
           {selectedArea ? ` in "${selectedArea}"` : ''}
+          {selectedTier ? ` with tier "${selectedTier}"` : ''}
         </Typography>
       </Box>
 
@@ -172,7 +214,21 @@ function Conferences() {
             <Grid item xs={12} md={6} key={conference.id}>
               <Card sx={{ height: '100%' }}>
                 <CardHeader
-                  title={conference.title}
+                  title={
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                      <Typography variant="h6" component="div" sx={{ flexGrow: 1, pr: 2 }}>
+                        {conference.title}
+                      </Typography>
+                      {conference.tier && (
+                        <Chip 
+                          label={conference.tier} 
+                          color={getTierColor(conference.tier)}
+                          size="small"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      )}
+                    </Box>
+                  }
                   subheader={
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                       <EventIcon fontSize="small" sx={{ mr: 1 }} />
